@@ -5127,6 +5127,7 @@ define('node',[
   }
 
   function hasContent(node) {
+
     if(node && node.children && node.children.length > 0) {
       return true;
     }
@@ -5134,7 +5135,6 @@ define('node',[
     if(node && node.nodeName === 'BR') {
       return true;
     }
-
     return false;
   }
 
@@ -5184,6 +5184,10 @@ define('node',[
 
     return false;
 
+  }
+
+  function isTextNodeWithContent(Node, node) {
+    return node.nodeType === Node.TEXT_NODE && !isWhitespaceOnlyTextNode(Node, node);
   }
 
   function firstDeepestChild(node) {
@@ -5289,6 +5293,7 @@ define('node',[
     isText: isText,
     isEmptyTextNode: isEmptyTextNode,
     isWhitespaceOnlyTextNode: isWhitespaceOnlyTextNode,
+    isTextNodeWithContent: isTextNodeWithContent,
     isFragment: isFragment,
     isBefore: isBefore,
     isSelectionMarkerNode: isSelectionMarkerNode,
@@ -5359,10 +5364,11 @@ define('plugins/core/formatters/html/ensure-selectable-containers',[
     while (node) {
       if (!nodeHelpers.isSelectionMarkerNode(node)) {
         // Find any node that contains no child *elements*, or just contains
-        // whitespace, and is not self-closing
+        // whitespace, is not self-closing and is not a custom element
         if (isEmpty(node) &&
           node.textContent.trim() === '' &&
-          !html5VoidElements.includes(node.nodeName)) {
+          !html5VoidElements.includes(node.nodeName) &&
+          node.nodeName.indexOf('-') === -1) {
           node.appendChild(document.createElement('br'));
         } else if (node.children.length > 0) {
           traverse(node);
@@ -5399,8 +5405,9 @@ define('plugins/core/inline-elements-mode',['../../node'], function (nodeHelpers
 
     while (treeWalker.nextNode()) {
       if (treeWalker.currentNode) {
+
         // If the node is a non-empty element or has content
-        if(nodeHelpers.hasContent(treeWalker.currentNode)) {
+        if(nodeHelpers.hasContent(treeWalker.currentNode) || nodeHelpers.isTextNodeWithContent(Node, treeWalker.currentNode)) {
           return true;
         }
       }
@@ -5431,18 +5438,32 @@ define('plugins/core/inline-elements-mode',['../../node'], function (nodeHelpers
             event.preventDefault();
 
             scribe.transactionManager.run(function () {
+              
+              if (!range.collapsed) {
+                range.deleteContents();
+              }
+
+
               /**
                * Firefox: Delete the bogus BR as we insert another one later.
                * We have to do this because otherwise the browser will believe
                * there is content to the right of the selection.
                */
-              if (scribe.el.lastChild.nodeName === 'BR') {
+              if (scribe.el.lastChild && scribe.el.lastChild.nodeName === 'BR') {
                 scribe.el.removeChild(scribe.el.lastChild);
               }
 
               var brNode = document.createElement('br');
 
               range.insertNode(brNode);
+
+              // Safari does not update the endoffset after inserting the BR element
+              // so we have to do it ourselves.
+              // References: 
+              // https://bugs.webkit.org/show_bug.cgi?id=63538#c3
+              // https://dom.spec.whatwg.org/#dom-range-selectnode
+              range.setEndAfter(brNode);
+              
               // After inserting the BR into the range is no longer collapsed, so
               // we have to collapse it again.
               // TODO: Older versions of Firefox require this argument even though
@@ -5470,7 +5491,9 @@ define('plugins/core/inline-elements-mode',['../../node'], function (nodeHelpers
                */
 
               var contentToEndRange = range.cloneRange();
-              contentToEndRange.setEndAfter(scribe.el.lastChild);
+              if (scribe.el.lastChild) {
+                contentToEndRange.setEndAfter(scribe.el.lastChild);
+              }
 
               // Get the content from the range to the end of the heading
               var contentToEndFragment = contentToEndRange.cloneContents();
@@ -7393,6 +7416,33 @@ define('config',['immutable'], function (immutable) {
   }
 });
 
+define('debounce',[], function () {
+  return function (func, wait, immediate) {
+    var timeout;
+
+    return function () {
+      var context = this, args = arguments;
+
+      var later = function () {
+        timeout = null;
+
+        if (!immediate) {
+          func.apply(context, args);
+        }
+      };
+
+      var callNow = immediate && !timeout;
+
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+
+      if (callNow) {
+        func.apply(context, args);
+      }
+    };
+  };
+});
+
 define('scribe',[
   './plugins/core/plugins',
   './plugins/core/commands',
@@ -7406,7 +7456,8 @@ define('scribe',[
   './node',
   'immutable',
   './config',
-  './events'
+  './events',
+  './debounce'
 ], function (
   plugins,
   commands,
@@ -7420,13 +7471,16 @@ define('scribe',[
   nodeHelpers,
   Immutable,
   config,
-  eventNames
+  eventNames,
+  debounce
 ) {
 
   'use strict';
 
   function Scribe(el, options) {
     EventEmitter.call(this);
+
+    var INPUT_DELAY = 300;
 
     this.el = el;
     this.commands = {};
@@ -7463,7 +7517,7 @@ define('scribe',[
 
     this.el.setAttribute('contenteditable', true);
 
-    this.el.addEventListener('input', function () {
+    this.el.addEventListener('input', debounce(function () {
       /**
        * This event triggers when either the user types something or a native
        * command is executed which causes the content to change (i.e.
@@ -7471,7 +7525,7 @@ define('scribe',[
        * these actions, so instead we run the transaction in this event.
        */
       this.transactionManager.run();
-    }.bind(this), false);
+    }.bind(this), INPUT_DELAY).bind(this), false);
 
     /**
      * Core Plugins

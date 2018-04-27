@@ -1,6 +1,6 @@
 {
   "name": "scribe",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "main": "./scribe.js",
   "description": "Content editable wrapper and polyfill",
   "authors": [
@@ -10,6 +10,6 @@
   "ignore": [],
   "repository": {
     "type": "git",
-    "url": "git://github.com/guardian/scribe.git"
+    "url": "git://github.com/infusionsoft/scribe.git"
   }
 }
