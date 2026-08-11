@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "main": "src/scribe.js",
   "dependencies": {
-    "immutable": "~3.8.1"
+    "immutable": "^4.3.9"
   },
   "devDependencies": {
     "chai": "~1.9.1",
@@ -30,7 +30,7 @@
     "url": "git://github.com/guardian/scribe.git"
   },
   "resolutions": {
-    "immutable": "3.8.3",
+    "immutable": "4.3.9",
     "form-data": "2.5.4",
     "lodash": "4.17.12",
     "minimist": "0.2.4",

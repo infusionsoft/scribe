@@ -1,8 +1,5 @@
 {
   "name": "scribe",
-  "dependencies": {
-    "immutable" : "3.8.1"
-  },
   "devDependencies": {
     "requirejs": "~2.1.9",
     "scribe-plugin-blockquote-command": "guardian/scribe-plugin-blockquote-command#master",

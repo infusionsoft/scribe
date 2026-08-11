@@ -24,7 +24,7 @@ module.exports = function(grunt) {
           name: "scribe",
           paths: {
             'lodash-amd': '../bower_components/lodash-amd',
-            'immutable': '../bower_components/immutable/dist/immutable'
+            'immutable': '../node_modules/immutable/dist/immutable'
           },
           optimize: optimize,
           preserveLicenseComments: false,
