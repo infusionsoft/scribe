@@ -5,7 +5,7 @@ bower install
 npm install deamdify
 npm install scribe-plugin-toolbar
 browserify -g deamdify \
--r ./bower_components/immutable/dist/immutable.js:immutable \
+-r ./node_modules/immutable/dist/immutable.js:immutable \
 -r ./bower_components/lodash-amd/modern/object/assign.js:lodash-amd/modern/object/assign \
 -r ./bower_components/lodash-amd/modern/object/defaults.js:lodash-amd/modern/object/defaults \
 -r ./bower_components/lodash-amd/modern/string/escape.js:lodash-amd/modern/string/escape \
